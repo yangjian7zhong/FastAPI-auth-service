@@ -5,6 +5,8 @@ from app.core.config import settings
 from app.schemas.chat import ChatRequest
 import httpx
 
+print("新版 ai.py 已加载（Pydantic 版本）")
+
 router = APIRouter()
 
 @router.post("/chat")
