@@ -11,8 +11,6 @@ from app.schemas.user import UserRegister, UserResponse, UserLogin
 from app.services.user import UserService
 from app.models.user import User
 
-api_key_scheme = APIKeyHeader(name='Authorization', auto_error=False)
-
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
 
@@ -58,7 +56,7 @@ async def login(
 
 
 async def get_current_user(
-        token: str = Security(oauth2_scheme),  # 关键：使用 oauth2_scheme
+        token: str = Security(oauth2_scheme),
         db: AsyncSession = Depends(get_db)
 ):
     if not token:

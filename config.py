@@ -16,9 +16,8 @@ class Settings:
     MAIL_PASSWORD: str = os.getenv("MAIL_PASSWORD", "")
     MAIL_FROM: str = os.getenv("MAIL_FROM", "")
     DEEPSEEK_API_KEY: str = os.getenv("DEEPSEEK_API_KEY", "")
-    BASE_URL: str = os.getenv("BASE_URL", "http://localhost:8000")
+    BASE_URL: str = os.getenv("BASE_URL", "https://fastapi-auth-service-production-87f3.up.railway.app")
     ENV: str = os.getenv("ENV", "dev")
-    # 是否启用演示账号（默认关闭）
     ENABLE_DEMO_ACCOUNT: bool = os.getenv("ENABLE_DEMO_ACCOUNT", "false").lower() == "true"
 
 settings = Settings()

@@ -23,7 +23,7 @@ def ensure_db():
     """)
     conn.commit()
     conn.close()
-    print(" 数据库表已确认（同步建表）")
+    print("数据库表已确认（同步建表）")
 
 ensure_db()
 
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="AI 应用后端",
     description="""
-## 测试账号
+##测试账号
 
 | 用户名 | 密码 | 说明 |
 |--------|------|------|
@@ -60,8 +60,8 @@ app = FastAPI(
 # ---------- 启动事件：演示账号 ----------
 @app.on_event("startup")
 async def startup():
-    await init_db()  # 用于创建演示账号（如果启用）
-    logger.info(" 数据库表初始化完成（通过 startup 事件）")
+    await init_db()
+    logger.info("数据库表初始化完成（通过 startup 事件）")
 
 # ---------- 中间件 ----------
 @app.middleware("http")

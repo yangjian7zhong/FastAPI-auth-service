@@ -1,9 +1,11 @@
-from fastapi import logger
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy import select
 from app.models.user import Base, User
 from app.core.config import settings
 from app.core.security import hash_password
+import logging
+
+logger = logging.getLogger(__name__)
 
 engine = create_async_engine(settings.DATABASE_URL, echo=False)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
@@ -16,7 +18,7 @@ async def init_db():
     """初始化数据库：建表 + 创建演示账号（如果启用）"""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        logger.info(" 数据库表创建完成")
+        logger.info("数据库表创建完成")
 
     # 如果启用演示账号，创建 demo 用户
     if settings.ENABLE_DEMO_ACCOUNT:
@@ -34,11 +36,11 @@ async def init_db():
                 )
                 session.add(demo_user)
                 await session.commit()
-                print(" 演示账号已创建: demo / demo123")
+                logger.info("演示账号已创建: demo / demo123")
             else:
-                print(" 演示账号已存在: demo / demo123")
+                logger.info("演示账号已存在: demo / demo123")
     else:
-        print("ℹ 演示账号未启用（ENABLE_DEMO_ACCOUNT=false）")
+        logger.info("ℹ演示账号未启用（ENABLE_DEMO_ACCOUNT=false）")
 
 
 
