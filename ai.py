@@ -6,6 +6,8 @@ import httpx
 
 router = APIRouter()
 
+print("新版 ai.py 已加载！")
+
 @router.post("/chat")
 async def chat(
         prompt: str = Body(...),  # 告诉 FastAPI 从请求体获取
