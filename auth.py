@@ -25,7 +25,6 @@ async def register(
 ):
     user = await UserService.register(user_data, db, background_tasks)
 
-    # 生成激活链接（直接返回，方便测试）
     activation_token = create_access_token(
         data={"sub": user.username, "type": "activation"},
         expires_delta=timedelta(minutes=settings.ACTIVATION_TOKEN_EXPIRE_MINUTES)
@@ -59,7 +58,7 @@ async def login(
 
 
 async def get_current_user(
-        token: str = Security(oauth2_scheme),  # 👈 改为使用 oauth2_scheme
+        token: str = Security(oauth2_scheme),  # 关键：使用 oauth2_scheme
         db: AsyncSession = Depends(get_db)
 ):
     if not token:
