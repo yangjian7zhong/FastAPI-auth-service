@@ -59,7 +59,7 @@ async def login(
 
 
 async def get_current_user(
-        token: str = Security(api_key_scheme),
+        token: str = Security(oauth2_scheme),  # 👈 改为使用 oauth2_scheme
         db: AsyncSession = Depends(get_db)
 ):
     if not token:
