@@ -11,8 +11,6 @@ from app.schemas.user import UserRegister, UserResponse, UserLogin
 from app.services.user import UserService
 from app.models.user import User
 
-print(" 新版 register 函数已加载")
-
 api_key_scheme = APIKeyHeader(name='Authorization', auto_error=False)
 
 router = APIRouter()
@@ -25,7 +23,6 @@ async def register(
         background_tasks: BackgroundTasks,
         db: AsyncSession = Depends(get_db)
 ):
-    # 调用 Service 层注册（内部会发送邮件，如果配置正确的话）
     user = await UserService.register(user_data, db, background_tasks)
 
     # 生成激活链接（直接返回，方便测试）
