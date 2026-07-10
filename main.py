@@ -1,83 +1,64 @@
-from fastapi import FastAPI,Request
-from app.api.v1.endpoints import auth,ai
-from fastapi.security import APIKeyHeader
-
+from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
+import time
+import logging
 
-
-@asynccontextmanager
-async def lifespan(app:FastAPI):
-    from app.core.database import init_db
-    await init_db()
-    print('数据库表初始化完成')
-    yield
-
-
-
-
-app=FastAPI(title='AI 应用后端',lifespan=lifespan)
-
-
-import asyncio
+from app.api.v1.endpoints import auth, ai
 from app.core.database import engine
 from app.models.user import Base
 
+# ---------- 日志配置 ----------
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# ---------- 数据库初始化函数 ----------
 async def init_db():
+    """初始化数据库表"""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         print("✅ 数据库表创建完成")
 
-asyncio.run(init_db())
+# ---------- 生命周期管理 ----------
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 启动时执行
+    print("🚀 正在初始化数据库...")
+    await init_db()
+    print("✅ 数据库表初始化完成")
+    yield
+    # 关闭时执行（如果有需要清理的资源）
+    print("🛑 应用关闭")
 
-import time
-import logging
+# ---------- 创建 FastAPI 实例 ----------
+app = FastAPI(
+    title="AI 应用后端",
+    description="支持用户认证、AI对话、RAG检索",
+    version="1.0.0",
+    lifespan=lifespan
+)
 
-# 配置日志（如果还没配置的话）
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-
+# ---------- 中间件：记录响应时间 ----------
 @app.middleware("http")
 async def log_request_time(request: Request, call_next):
-    """记录每个请求的响应时间"""
     start_time = time.perf_counter()
-
-    # 执行请求
     response = await call_next(request)
-
-    # 计算耗时（毫秒）
     process_time = (time.perf_counter() - start_time) * 1000
-
-    # 打印日志
     logger.info(
         f"{request.method} {request.url.path} "
         f"耗时: {process_time:.2f}ms "
         f"状态码: {response.status_code}"
     )
-
-    # 可选：把耗时加到响应头里（方便前端/监控抓取）
     response.headers["X-Process-Time"] = f"{process_time:.2f}ms"
-
     return response
 
-
-
-# 添加 API Key 安全方案，让 Swagger 显示输入框
-security_scheme = APIKeyHeader(name="Authorization", auto_error=False)
-
-
-
-app.include_router(auth.router,prefix='/api/v1',tags=['认证'])
-
-@app.get('/')
-async def root():
-    return {'msg':'FastAPI项目已启动','docs':'/docs'}
-
+# ---------- 注册路由 ----------
+app.include_router(auth.router, prefix="/api/v1", tags=["认证"])
 app.include_router(ai.router, prefix="/api/v1", tags=["AI"])
 
-
-app.include_router(auth.router, prefix="/api/v1")
-app.include_router(ai.router, prefix="/api/v1")
+# ---------- 根路径 ----------
+@app.get("/")
+async def root():
+    return {"msg": "FastAPI 项目已启动", "docs": "/docs"}
 
 
 
