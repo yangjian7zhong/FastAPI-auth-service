@@ -11,6 +11,8 @@ from app.schemas.user import UserRegister, UserResponse, UserLogin
 from app.services.user import UserService
 from app.models.user import User
 
+print(" 新版 register 函数已加载")
+
 api_key_scheme = APIKeyHeader(name='Authorization', auto_error=False)
 
 router = APIRouter()
