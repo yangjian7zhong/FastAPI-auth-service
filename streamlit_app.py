@@ -50,3 +50,4 @@ if prompt := st.chat_input("输入问题"):
                     st.session_state.messages.append({"role": "assistant", "content": content})
                 else:
                     st.error(f"请求失败: {resp.status_code}")
+                    st.text(resp.text)  
