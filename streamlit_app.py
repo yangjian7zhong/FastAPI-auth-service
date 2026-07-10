@@ -5,7 +5,7 @@ st.set_page_config(page_title="AI 问答助手", layout="wide")
 st.title("🤖 AI 智能问答")
 
 # 后端 API 地址（部署时改成你的 Railway 域名）
-API_BASE = "https://your-api.up.railway.app"
+API_BASE = "https://fastapi-auth-service-production-87f3.up.railway.app"
 
 with st.sidebar:
     st.header("🔑 登录")
