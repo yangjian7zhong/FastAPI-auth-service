@@ -17,6 +17,18 @@ async def lifespan(app:FastAPI):
 
 app=FastAPI(title='AI 应用后端',lifespan=lifespan)
 
+
+import asyncio
+from app.core.database import engine
+from app.models.user import Base
+
+async def init_db():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+        print("✅ 数据库表创建完成")
+
+asyncio.run(init_db())
+
 import time
 import logging
 
