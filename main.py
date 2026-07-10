@@ -3,11 +3,15 @@ import os
 from fastapi import FastAPI, Request
 import time
 import logging
+from contextlib import asynccontextmanager
 
 from app.api.v1.endpoints import auth, ai
-from app.core.database import init_db
+from app.core.database import AsyncSessionLocal
+from app.models.user import User
+from app.core.security import hash_password
+from sqlalchemy import select
 
-# ---------- 同步建表（确保启动时表存在） ----------
+# ---------- 同步建表（确保表存在） ----------
 def ensure_db():
     db_path = os.path.join(os.path.dirname(__file__), "test.db")
     conn = sqlite3.connect(db_path)
@@ -57,11 +61,25 @@ app = FastAPI(
     }
 )
 
-# ---------- 启动事件：演示账号 ----------
+# ---------- 启动事件：强制创建演示账号 ----------
 @app.on_event("startup")
 async def startup():
-    await init_db()
-    logger.info("数据库表初始化完成（通过 startup 事件）")
+    # 创建 demo 用户（无论环境变量是否启用，都强制创建）
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(User).where(User.username == "demo"))
+        user = result.scalar_one_or_none()
+        if not user:
+            demo_user = User(
+                username="demo",
+                email="demo@test.com",
+                hashed_password=hash_password("demo123"),
+                is_active=True
+            )
+            session.add(demo_user)
+            await session.commit()
+            logger.info("演示账号已强制创建: demo / demo123")
+        else:
+            logger.info("演示账号已存在: demo / demo123")
 
 # ---------- 中间件 ----------
 @app.middleware("http")

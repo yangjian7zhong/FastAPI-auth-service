@@ -11,6 +11,8 @@ from app.schemas.user import UserRegister, UserResponse, UserLogin
 from app.services.user import UserService
 from app.models.user import User
 
+api_key_scheme = APIKeyHeader(name='Authorization', auto_error=False)
+
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
 
@@ -55,8 +57,9 @@ async def login(
     return {'access_token': access_token, 'token_type': 'bearer'}
 
 
+# 关键：这里使用 APIKeyHeader，让 Swagger 显示 Token 输入框，而不是用户名密码
 async def get_current_user(
-        token: str = Security(oauth2_scheme),
+        token: str = Security(api_key_scheme),
         db: AsyncSession = Depends(get_db)
 ):
     if not token:
