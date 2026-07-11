@@ -58,6 +58,8 @@ async def login(
 
 
 # 关键：这里使用 APIKeyHeader，让 Swagger 显示 Token 输入框，而不是用户名密码
+from app.core.redis_client import redis_client
+
 async def get_current_user(
         token: str = Security(api_key_scheme),
         db: AsyncSession = Depends(get_db)
@@ -66,6 +68,13 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="Not authenticated")
     if token.startswith("Bearer "):
         token = token[7:]
+
+    # 检查 Redis 黑名单（降级模式）
+    is_blacklisted = await redis_client.get(f"blacklist:{token}")
+    if is_blacklisted:
+        raise HTTPException(status_code=401, detail="Token 已被注销")
+
+    # 正常解码和验证...
     payload = decode_token(token)
     username = payload.get("sub")
     if not username:

@@ -10,6 +10,7 @@ from app.core.database import AsyncSessionLocal
 from app.models.user import User
 from app.core.security import hash_password
 from sqlalchemy import select
+from app.core.redis_client import redis_client
 
 # ---------- 同步建表（确保表存在） ----------
 def ensure_db():
@@ -80,6 +81,7 @@ async def startup():
             logger.info("演示账号已强制创建: demo / demo123")
         else:
             logger.info("演示账号已存在: demo / demo123")
+    await redis_client.connect()
 
 # ---------- 中间件 ----------
 @app.middleware("http")
