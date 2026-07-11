@@ -11,8 +11,6 @@ from app.schemas.user import UserRegister, UserResponse, UserLogin
 from app.services.user import UserService
 from app.models.user import User
 
-print(" 新版 register 函数已加载")
-
 api_key_scheme = APIKeyHeader(name='Authorization', auto_error=False)
 
 router = APIRouter()
@@ -25,10 +23,8 @@ async def register(
         background_tasks: BackgroundTasks,
         db: AsyncSession = Depends(get_db)
 ):
-    # 调用 Service 层注册（内部会发送邮件，如果配置正确的话）
     user = await UserService.register(user_data, db, background_tasks)
 
-    # 生成激活链接（直接返回，方便测试）
     activation_token = create_access_token(
         data={"sub": user.username, "type": "activation"},
         expires_delta=timedelta(minutes=settings.ACTIVATION_TOKEN_EXPIRE_MINUTES)
@@ -61,6 +57,9 @@ async def login(
     return {'access_token': access_token, 'token_type': 'bearer'}
 
 
+# 关键：这里使用 APIKeyHeader，让 Swagger 显示 Token 输入框，而不是用户名密码
+from app.core.redis_client import redis_client
+
 async def get_current_user(
         token: str = Security(api_key_scheme),
         db: AsyncSession = Depends(get_db)
@@ -69,6 +68,13 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="Not authenticated")
     if token.startswith("Bearer "):
         token = token[7:]
+
+    # 检查 Redis 黑名单（降级模式）
+    is_blacklisted = await redis_client.get(f"blacklist:{token}")
+    if is_blacklisted:
+        raise HTTPException(status_code=401, detail="Token 已被注销")
+
+    # 正常解码和验证...
     payload = decode_token(token)
     username = payload.get("sub")
     if not username:

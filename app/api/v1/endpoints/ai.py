@@ -1,18 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.api.v1.endpoints.auth import get_current_user
 from app.models.user import User
-from app.core.config import settings  # 导入配置
+from app.core.config import settings
+from app.schemas.chat import ChatRequest
 import httpx
 
 router = APIRouter()
 
-
 @router.post("/chat")
 async def chat(
-        prompt: str,
-        current_user: User = Depends(get_current_user)
+    request: ChatRequest,
+    current_user: User = Depends(get_current_user)
 ):
-    api_key = settings.DEEPSEEK_API_KEY  # 从配置读取
+    api_key = settings.DEEPSEEK_API_KEY
     if not api_key:
         raise HTTPException(status_code=500, detail="API Key not configured")
 
@@ -25,7 +25,7 @@ async def chat(
             },
             json={
                 "model": "deepseek-chat",
-                "messages": [{"role": "user", "content": prompt}],
+                "messages": [{"role": "user", "content": request.prompt}],
                 "stream": False
             },
             timeout=30.0
