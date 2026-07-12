@@ -105,7 +105,8 @@ app.include_router(ai.router, prefix="/api/v1", tags=["AI"])
 async def root():
     return {"msg": "FastAPI 项目已启动", "docs": "/docs"}
 
-
+from app.api.v1.endpoints import agent
+app.include_router(agent.router, prefix="/api/v1", tags=["Agent"])
 
 
 
