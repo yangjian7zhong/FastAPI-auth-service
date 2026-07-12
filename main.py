@@ -1,3 +1,13 @@
+
+
+import os
+import sys
+
+# 清除 SSL_CERT_FILE 环境变量（避免本地证书路径错误）
+if "SSL_CERT_FILE" in os.environ:
+    del os.environ["SSL_CERT_FILE"]
+
+
 import sqlite3
 import os
 from fastapi import FastAPI, Request
