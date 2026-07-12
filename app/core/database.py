@@ -1,13 +1,27 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from sqlalchemy import select
-from app.models.user import Base, User
+from app.models.user import Base
 from app.core.config import settings
-from app.core.security import hash_password
 import logging
 
 logger = logging.getLogger(__name__)
 
-engine = create_async_engine(settings.DATABASE_URL, echo=False)
+# 判断是否为 SQLite
+is_sqlite = settings.DATABASE_URL.startswith("sqlite")
+
+# 构造引擎参数
+engine_kwargs = {
+    "echo": False,
+    "pool_pre_ping": settings.DB_POOL_PRE_PING,
+    "pool_recycle": settings.DB_POOL_RECYCLE,
+}
+
+# 只有非 SQLite 才传递连接池大小参数
+if not is_sqlite:
+    engine_kwargs["pool_size"] = settings.DB_POOL_SIZE
+    engine_kwargs["max_overflow"] = settings.DB_MAX_OVERFLOW
+
+engine = create_async_engine(settings.DATABASE_URL, **engine_kwargs)
+
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 async def get_db():
@@ -15,29 +29,10 @@ async def get_db():
         yield session
 
 async def init_db():
-    """初始化数据库：建表 + 强制创建演示账号"""
+    """启动时自动建表"""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        logger.info("数据库表创建完成")
-
-    # 强制创建 demo 用户（忽略环境变量）
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(User).where(User.username == "demo")
-        )
-        existing = result.scalar_one_or_none()
-        if not existing:
-            demo_user = User(
-                username="demo",
-                email="demo@test.com",
-                hashed_password=hash_password("demo123"),
-                is_active=True
-            )
-            session.add(demo_user)
-            await session.commit()
-            logger.info("演示账号已创建: demo / demo123")
-        else:
-            logger.info("演示账号已存在: demo / demo123")
+        logger.info("数据库表创建完成（PostgreSQL/SQLite）")
 
 
 

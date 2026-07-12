@@ -7,12 +7,12 @@ import sys
 if "SSL_CERT_FILE" in os.environ:
     del os.environ["SSL_CERT_FILE"]
 
-
 import sqlite3
 import os
 from fastapi import FastAPI, Request
 import time
 import logging
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 
 from app.api.v1.endpoints import auth, ai
@@ -21,6 +21,7 @@ from app.models.user import User
 from app.core.security import hash_password
 from sqlalchemy import select
 from app.core.redis_client import redis_client
+
 
 # ---------- 同步建表（确保表存在） ----------
 def ensure_db():
@@ -50,7 +51,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="AI 应用后端",
     description="""
-##测试账号
+## 测试账号
 
 | 用户名 | 密码 | 说明 |
 |--------|------|------|
@@ -71,6 +72,18 @@ app = FastAPI(
         "appName": "AI 应用后端",
     }
 )
+
+
+# ========== 全局异常处理器 ==========
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"全局异常: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"服务器内部错误: {str(exc)}"}
+    )
+# =====================================
+
 
 # ---------- 启动事件：强制创建演示账号 ----------
 @app.on_event("startup")
@@ -93,6 +106,7 @@ async def startup():
             logger.info("演示账号已存在: demo / demo123")
     await redis_client.connect()
 
+
 # ---------- 中间件 ----------
 @app.middleware("http")
 async def log_request_time(request: Request, call_next):
@@ -107,16 +121,18 @@ async def log_request_time(request: Request, call_next):
     response.headers["X-Process-Time"] = f"{process_time:.2f}ms"
     return response
 
+
 # ---------- 路由 ----------
 app.include_router(auth.router, prefix="/api/v1", tags=["认证"])
 app.include_router(ai.router, prefix="/api/v1", tags=["AI"])
 
+from app.api.v1.endpoints import agent
+app.include_router(agent.router, prefix="/api/v1", tags=["Agent"])
+
+
 @app.get("/")
 async def root():
     return {"msg": "FastAPI 项目已启动", "docs": "/docs"}
-
-from app.api.v1.endpoints import agent
-app.include_router(agent.router, prefix="/api/v1", tags=["Agent"])
 
 
 

@@ -3,9 +3,10 @@ from fastapi.security import OAuth2PasswordBearer, APIKeyHeader
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import timedelta
+import os
 
 from app.core.database import get_db
-from app.core.security import decode_token, create_access_token
+from app.core.security import decode_token, create_access_token,verify_password
 from app.core.config import settings
 from app.schemas.user import UserRegister, UserResponse, UserLogin
 from app.services.user import UserService
@@ -26,10 +27,12 @@ async def register(
     user = await UserService.register(user_data, db, background_tasks)
 
     activation_token = create_access_token(
-        data={"sub": user.username, "type": "activation"},
+        data={"sub": str(user.id), "type": "activation"},
         expires_delta=timedelta(minutes=settings.ACTIVATION_TOKEN_EXPIRE_MINUTES)
     )
     activation_link = f"{settings.BASE_URL}/api/v1/activate?token={activation_token}"
+
+    print(f"注册成功，激活链接: {activation_link}")
 
     return {
         'msg': '注册成功！请点击下方链接激活账号（10分钟内有效）',
@@ -43,8 +46,37 @@ async def activate_account(
         token: str,
         db: AsyncSession = Depends(get_db)
 ):
-    user = await UserService.activate_account(token, db)
-    return {'msg': '账号激活成功！' if not user.is_active else '账号已激活'}
+    print(f"进入激活接口，token: {token[:20]}...")  # 打印前20字符防止刷屏
+
+    payload = decode_token(token)
+    print(f"解析后的 payload: {payload}")
+
+    if payload.get("type") != "activation":
+        raise HTTPException(status_code=400, detail="无效的激活链接")
+
+    user_id_str = payload.get("sub")
+    if not user_id_str:
+        raise HTTPException(status_code=400, detail="无效的激活链接")
+
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="无效的激活链接")
+
+    print(f"查询 user_id: {user_id}")
+
+    user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+    if not user:
+        print(f"用户不存在: id={user_id}")
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    if user.is_active:
+        return {'msg': '账号已激活'}
+
+    user.is_active = True
+    await db.commit()
+    print(f"用户激活成功: {user.username} (id={user.id})")
+    return {'msg': '账号激活成功！'}
 
 
 @router.post('/login')
@@ -52,13 +84,15 @@ async def login(
         login_data: UserLogin,
         db: AsyncSession = Depends(get_db)
 ):
-    access_token = await UserService.login(
-        login_data.username, login_data.password, db)
+    user = (await db.execute(select(User).where(User.username == login_data.username))).scalar_one_or_none()
+    if not user or not verify_password(login_data.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="账号或密码错误")
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="请先激活账号")
+
+    access_token = create_access_token(data={"sub": str(user.id)})
     return {'access_token': access_token, 'token_type': 'bearer'}
 
-
-# 关键：这里使用 APIKeyHeader，让 Swagger 显示 Token 输入框，而不是用户名密码
-from app.core.redis_client import redis_client
 
 async def get_current_user(
         token: str = Security(api_key_scheme),
@@ -68,20 +102,15 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="Not authenticated")
     if token.startswith("Bearer "):
         token = token[7:]
-
-    # 检查 Redis 黑名单（降级模式）
-    is_blacklisted = await redis_client.get(f"blacklist:{token}")
-    if is_blacklisted:
-        raise HTTPException(status_code=401, detail="Token 已被注销")
-
-    # 正常解码和验证...
     payload = decode_token(token)
-    username = payload.get("sub")
-    if not username:
+    user_id = payload.get("sub")
+    if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token")
-
-    result = await db.execute(select(User).where(User.username == username))
-    user = result.scalar_one_or_none()
+    try:
+        user_id = int(user_id)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
     return user
