@@ -2,7 +2,7 @@
 
 
 ## 📸 Swagger 实测截图
-![Swagger 截图](./docs/images/swagger-sources.png)  <!-- 你需要截图后放到该路径 -->
+![Swagger 截图](./docs/images/swagger-sources.png)  <!-- ./docs/images/swagger-sources.png -->
 *调用 /chat 接口返回的 sources 字段包含文档来源和相似度分数 (score)*
 
 ## 🐛 真实 Badcase
