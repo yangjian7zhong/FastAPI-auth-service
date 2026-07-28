@@ -33,18 +33,19 @@ COPY requirements.txt .
 
 RUN pip install --root-user-action=ignore --upgrade pip setuptools wheel packaging
 
-# 强制 CPU 版 PyTorch；Railway 无 GPU，不能下载 CUDA/NVIDIA 依赖。
-# 2.4.1 满足当前 transformers 对 PyTorch >= 2.4 的要求。
+# Railway 没有 GPU：使用 CPU 版 PyTorch，避免下载 CUDA / NVIDIA 依赖。
 RUN pip install --root-user-action=ignore \
     --index-url https://download.pytorch.org/whl/cpu \
-    torch==2.4.1+cpu
+    torch==2.2.2+cpu
 
 RUN pip install --root-user-action=ignore \
     -r requirements.txt \
     -i https://pypi.tuna.tsinghua.edu.cn/simple
 
+# 构建时预下载模型，服务启动时无需再下载。
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('paraphrase-MiniLM-L3-v2')"
 
 COPY . .
 
+# Railway 会提供 PORT；sh -c 用于展开该环境变量。
 CMD ["sh", "-c", "streamlit run streamlit_app.py --server.port ${PORT:-8501} --server.address 0.0.0.0"]
