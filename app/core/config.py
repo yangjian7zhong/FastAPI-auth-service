@@ -29,6 +29,10 @@ class Settings:
     MAIL_FROM: str = os.getenv("MAIL_FROM", "")
 
     DEEPSEEK_API_KEY: str = os.getenv("DEEPSEEK_API_KEY", "")
+    SILICONFLOW_API_KEY: str = os.getenv("SILICONFLOW_API_KEY", "")
+    # 仅本地压测可选；生产勿设置，设置后可用该 Bearer 调 /rag/* 而无需 JWT
+    RAG_BENCHMARK_TOKEN: str = os.getenv("RAG_BENCHMARK_TOKEN", "")
+
     BASE_URL: str = os.getenv("BASE_URL", "https://fastapi-auth-service-production-87f3.up.railway.app")
     ENV: str = os.getenv("ENV", "dev")
     ENABLE_DEMO_ACCOUNT: bool = os.getenv("ENABLE_DEMO_ACCOUNT", "false").lower() == "true"

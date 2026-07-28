@@ -1,5 +1,6 @@
 
 
+
 import os
 import sys
 
@@ -126,9 +127,11 @@ async def log_request_time(request: Request, call_next):
 app.include_router(auth.router, prefix="/api/v1", tags=["认证"])
 app.include_router(ai.router, prefix="/api/v1", tags=["AI"])
 
+from app.api.v1.endpoints import agent, rag
+
 from app.api.v1.endpoints import agent
 app.include_router(agent.router, prefix="/api/v1", tags=["Agent"])
-
+app.include_router(rag.router, prefix="/api/v1", tags=["RAG"])
 
 @app.get("/")
 async def root():
