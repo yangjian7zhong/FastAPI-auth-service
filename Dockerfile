@@ -27,4 +27,5 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('paraphrase-MiniLM-L3-v2')"
 COPY . .
+RUN pip install --upgrade pip setuptools wheel packaging
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
